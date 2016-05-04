@@ -1,6 +1,9 @@
 #include "logger.h"
 
 #include <ctime>
+#include <algorithm>
+#include <unordered_map>
+#include <string>
 
 Logger::Logger()
 {
@@ -10,20 +13,37 @@ std::ostringstream& Logger::getLogger(logLevel_t level)
 {
   os << getTime();
   os << " " << toString(level) << ": ";
-  os << std::string(level > logDebug ? level - logDebug : 0, '\t');
+  //os << std::string(level > logDebug ? level - logDebug : 0, '\t');
   return os;
 }
 
 Logger::~Logger()
 {
   os << std::endl;
-  facility()->output(os.str());
+  //for_each(facilities().begin(), facilities().end(), [this](LoggerFacility* lf){lf->output(os.str());});
+  for(auto f : facilities())
+    f->output(os.str());
 }
 
-LoggerFacility*& Logger::facility()
+void Logger::registerFacility(LoggerFacility* lf)
 {
-  static LoggerFacility* lf = 0;
-  return lf;
+  Logger::facilities().push_back(lf);
+}
+
+bool Logger::unregisterFacility(LoggerFacility* lf)
+{
+  auto it = find(facilities().begin(), facilities().end(), lf);
+  if (it != facilities().end()) {
+    facilities().erase(it);
+    return true;
+  }
+  return false;
+}
+
+std::vector<LoggerFacility*>& Logger::facilities()
+{
+  static std::vector<LoggerFacility*> lfs;
+  return lfs;
 }
 
 logLevel_t Logger::fromString(const std::string& level)
@@ -31,7 +51,7 @@ logLevel_t Logger::fromString(const std::string& level)
     if (level == "DEBUG")
         return logDebug;
     if (level == "DETAIL")
-        return logDetailed;
+        return logDetail;
     if (level == "INFO")
         return logInfo;
     if (level == "WARNING")
@@ -58,8 +78,21 @@ logLevel_t& Logger::logLevel()
 
 std::string Logger::toString(logLevel_t level)
 {
-  static const char* const buffer[] = { "ERROR", "WARNING", "INFO", "DETAIL", "DEBUG" };
-  return buffer[level];
+  const std::unordered_map<int, std::string> strmap = {
+    {logError, "ERROR"},
+    {logWarning, "WARNING"},
+    {logInfo, "INFO"},
+    {logDetail, "DETAIL"},
+    {logDebug, "DEBUG"}};
+  std::string str;
+  try {
+    str = strmap.at(level);
+  } catch(std::out_of_range e) {
+    str = "CUSTOM"+std::to_string(level-logLevelCount+1);
+  }
+  return str;
+  //static const char* const buffer[] = { "ERROR", "WARNING", "INFO", "DETAIL", "DEBUG" };
+  //return buffer[level];
 }
 
 LoggerFacility::~LoggerFacility()

@@ -9,8 +9,9 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
-enum logLevel_t { logError, logWarning, logInfo, logDetailed, logDebug };
+enum logLevel_t { logError, logWarning, logInfo, logDetail, logDebug, logLevelCount };
 
 class LoggerFacility;
 
@@ -20,12 +21,14 @@ public:
   Logger();
   virtual ~Logger();
   std::ostringstream& getLogger(logLevel_t level = logInfo);
-  static LoggerFacility*& facility();
+  static void registerFacility(LoggerFacility* lf);
+  static bool unregisterFacility(LoggerFacility* lf);
   static logLevel_t& logLevel();
   static std::string toString(logLevel_t level);
   static logLevel_t fromString(const std::string& level);
   inline std::string getTime();
 protected:
+  static std::vector<LoggerFacility*>& facilities();
   std::ostringstream os;
 };
 
